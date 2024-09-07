@@ -912,15 +912,16 @@ void MakeSpecialRooms()
   // more, we will simply use an equivalent--namely, to
   // divide the map into an 8x8 grid and place one
   // checkpoint per square
-
-  // BUG: This can somehow spawn an additional checkpoint in the starting room
   for (y = 0; y < 8; y++) {
     for (x = 0; x < 8; x++) {
       j = -1;
       for (i = 0; i < 20; i++) {
-        j = GetRoom(rand() % 64 + x * 64, rand() % 64 + y * 64);
+        // find another room if we roll the starting room
+        do {
+          j = GetRoom(rand() % 64 + x * 64, rand() % 64 + y * 64);
+        } while (j == 0);
         
-        if (j >= 0) {
+        if (j > 0) {
           if (rooms[j].room_type == 0) {
             Put(rooms[j].x + rooms[j].w / 2, rooms[j].y + rooms[j].h / 2, 25, j);
             rooms[j].checkpoint = 1;

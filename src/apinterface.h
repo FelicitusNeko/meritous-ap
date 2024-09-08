@@ -47,4 +47,7 @@ char isDeathLink();
 char SendDeathLink();
 char AnnounceAPVictory(char isFullVictory);
 
+const char* GetSlotName();
+const char* GetRoomSeed();
+
 #endif

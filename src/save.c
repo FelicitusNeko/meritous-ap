@@ -32,6 +32,7 @@
 #include "tiles.h"
 #include "itemhandler.h"
 #include "stats.h"
+#include "apinterface.h"
 
 gzFile Filefp;
 int game_load = 0;
@@ -120,8 +121,21 @@ float FRFloat()
 	return i;
 }
 
-void SaveGame(const char *filename)
+char* GetSaveFileName()
 {
+	char* filename = calloc(32, sizeof(char));
+	strcpy(filename, "SaveAP");
+	if (isArchipelago()) {
+		strcat(filename, "_");
+		strcat(filename, GetSlotName());
+	}
+	strcat(filename, ".sav");
+	return filename;
+}
+
+void SaveGame()
+{
+	char* filename = GetSaveFileName();
 	add_int_stat(STAT_SAVES, 1);
 
 	lchar = 0x7c;
@@ -136,10 +150,14 @@ void SaveGame(const char *filename)
 	WriteStatsData();
 
 	gzclose(Filefp);
+
+	free(filename);
 }
 
-void LoadGame(const char *filename)
+void LoadGame()
 {
+	char* filename = GetSaveFileName();
+
 	unsigned char parity;
 	fpos = 0;
 	lchar = 0x7c;
@@ -151,6 +169,8 @@ void LoadGame(const char *filename)
 		exit(2);
 	}
 	game_load = 1;
+
+	free(filename);
 }
 
 void CloseFile()
@@ -161,16 +181,19 @@ void CloseFile()
 void DoSaveGame()
 {
 	SavingScreen(0, 0.0);
-	SaveGame("SaveAP.sav");
+	SaveGame();
 }
 
 int IsSaveFile()
 {
 	FILE *fp;
-	if ((fp = fopen("SaveAP.sav", "rb")) != NULL) {
+	char* filename = GetSaveFileName();
+	if ((fp = fopen(filename, "rb")) != NULL) {
 		fclose(fp);
+		free(filename);
 		return 1;
 	}
+	free(filename);
 	return 0;
 }
 

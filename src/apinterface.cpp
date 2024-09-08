@@ -51,6 +51,7 @@ int nextCheckToGet = 0;
 std::string server;
 std::string slotname;
 std::string password;
+std::string seed;
 
 int goal = 0;
 bool deathlink = false;
@@ -118,6 +119,14 @@ char ReadAPSettings() {
 
     return 1;
   } else return 0;
+}
+
+const char* GetSlotName() {
+  return slotname.c_str();
+}
+
+const char* GetRoomSeed() {
+  return seed.c_str();
 }
 
 void CreateAPStores()
@@ -252,6 +261,7 @@ void ConnectAP()
   });
   ap->set_room_info_handler([](){
     printf("Room info received\n");
+    seed = ap->get_seed();
     std::list<std::string> tags;
     ap->ConnectSlot(slotname, password, 0b111, {"AP"}, {0,4,6});
     ap_connect_sent = true; // TODO: move to APClient::State ?

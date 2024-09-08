@@ -96,7 +96,16 @@ void DrawShield();
 void HandleGamepad (int key_held[]);
 
 int key_held[10] = {0};
+int menu_key_held[10] = { 0 };
 int game_running = 1;
+
+char typed_key = ' ';
+typedef enum menuScreens {
+  MENU_APENABLED,
+  MENU_GAMEMODE,
+  MENU_CONNECTION,
+} t_menuScreens;
+t_menuScreens menu_screen = MENU_APENABLED;
 
 int player_x;
 int player_y;
@@ -264,6 +273,7 @@ void ScrollTo(int x, int y);
 #define K_RT 3
 #define K_SP 4
 #define K_c 5
+#define K_BS 6
 
 SDL_Window *window;
 SDL_Renderer *renderer;
@@ -283,6 +293,8 @@ void DrawCircleEx(int x, int y, int r, int r2, unsigned char c);
 
 void ThinLine(SDL_Surface *scr, int x1, int y1, int x2, int y2, Uint8 col);
 void LockDoors(int r);
+
+void HandleTitleScreen();
 
 #define SCREEN_W 640
 #define SCREEN_H 480
@@ -421,7 +433,7 @@ void DummyEventPoll()
   SDL_PollEvent(&e);
 }
 
-int DungeonPlay(const char *fname);
+int DungeonPlay(const int continueGame);
 
 Uint8 Uint8_Bound(int c)
 {
@@ -447,30 +459,25 @@ void ClearInput()
   key_held[K_LT] = 0;
   key_held[K_RT] = 0;
   key_held[K_c] = 0;
+  key_held[K_BS] = 0;
+  menu_key_held[K_UP] = 0;
+  menu_key_held[K_DN] = 0;
+  typed_key = ' ';
 }
 
 int main(int argc, char **argv)
 {
   int on_title = 1;
   int executable_running = 1;
-  SDL_Surface *title, *title_pr, *asceai;
+  SDL_Surface *asceai;
   SDL_Surface *wm_icon;
-  Uint8 *src_p, *col_p;
   Uint8 wm_mask[128];
   int i;
   //int light = 0;
   int x, y;
-  int pulse[SCREEN_W * SCREEN_H];
-  int precalc_sine[400];
-  int tick = 10000000;
   int option = 0;
-  int can_continue = 0;
-  int maxoptions;
-
-  int last_key = 0;
 
   int fullscreen = 0;
-  int ticker_tick = 0;
   unsigned int stime = 0;
 
   FILE *wm_mask_file;
@@ -565,17 +572,7 @@ int main(int argc, char **argv)
   InitAudio();
 
   text_init();
-  for (i = 0; i < 400; i++) {
-    precalc_sine[i] = sin((float)i / 400 * M_PI * 2)*24+24;
-  }
 
-
-  for (i = 0; i < screen->w * screen->h; i++) {
-    x = i % SCREEN_W;
-    y = i / SCREEN_W;
-
-    pulse[i] = dist(x, y, SCREEN_W / 2, SCREEN_H / 2);
-  }
   SetGreyscalePalette();
 
   int warning_length = sizeof(photo_warning) / sizeof(*photo_warning);
@@ -625,97 +622,32 @@ int main(int argc, char **argv)
   }
 
   while (executable_running) {
-    ticker_tick = 0;
     TitleScreenMusic();
 
-    if (IsSaveFile()) {
-      can_continue = 1;
-    } else {
-      can_continue = 0;
-    }
+    //if (IsSaveFile()) {
+    //  can_continue = 1;
+    //} else {
+    //  can_continue = 0;
+    //}
 
-    maxoptions = 2 + can_continue;
+    //maxoptions = 2 + can_continue;
+    // TODO: clean up
+    int can_continue = 1;
 
-    title = IMG_Load("dat/i/title.png");
-    title_pr = IMG_Load("dat/i/title.png");
-
-    while (on_title) {
-      SetTitlePalette2(ticker_tick);
-      col_p = (Uint8 *)title_pr->pixels;
-      src_p = (Uint8 *)title->pixels;
-      if ((tick % 10) == 0) {
-        for (i = 0; i < 640*480; i++) {
-          *(col_p++) = Uint8_Bound(*(src_p++)+precalc_sine[(pulse[i]+tick)%400]);
-        }
-      }
-      SDL_BlitSurface(title_pr, NULL, screen, NULL);
-
-      draw_text(17, 156, MERITOUS_VERSION, 225 + sin((float)ticker_tick / 15)*30);
-      if (can_continue) draw_text((SCREEN_W - 14*8)/2, 310, "Continue", 255);
-      draw_text((SCREEN_W - 14*8)/2, 310 + can_continue*10, "New Game", 255);
-      draw_text((SCREEN_W - 14*8)/2, 320 + can_continue*10, "New Game (Training mode)", 255);
-
-      if (ticker_tick >= 30) {
-        draw_text((SCREEN_W - 14*8)/2 - 17, 310 + option * 10, "-", 205 + sin((float)ticker_tick / 5.0)*24);
-        draw_text((SCREEN_W - 14*8)/2 - 20, 310 + option * 10, " >", 205 + sin((float)ticker_tick / 5.0)*24);
-        draw_text((SCREEN_W - 14*8)/2 - 19, 310 + option * 10, " >", 190 + sin((float)ticker_tick / 5.0)*24);
-        draw_text((SCREEN_W - 14*8)/2 - 21, 310 + option * 10, " >", 190 + sin((float)ticker_tick / 5.0)*24);
-        draw_text((SCREEN_W - 14*8)/2 - 18, 310 + option * 10, " >", 165 + sin((float)ticker_tick / 5.0)*24);
-        draw_text((SCREEN_W - 14*8)/2 - 22, 310 + option * 10, " >", 165 + sin((float)ticker_tick / 5.0)*24);
-      }
-
-      if (isArchipelago()) draw_text(0, 450, "AP Enabled", 255);
-
-      VideoUpdate();
-
-      if (ticker_tick++ > 30) {
-        HandleEvents();
-
-        if (key_held[K_UP]) {
-          if (last_key != 1)
-            if (option > 0) option--;
-          last_key = 1;
-        } else {
-          if (key_held[K_DN]) {
-            if (last_key != 2)
-              if (option < maxoptions-1) option++;
-            last_key = 2;
-          } else {
-            last_key = 0;
-            if (key_held[K_SP] || enter_pressed) {
-              on_title = 0;
-            }
-          }
-        }
-
-        if (voluntary_exit) {
-          executable_running = 0;
-          on_title = 0;
-          SDL_Quit();
-          exit(0);
-        }
-      }
-
-      EndCycle(10);
-
-      //light = 0;
-      tick -= 2;
-    }
+    HandleTitleScreen();
 
     ClearInput();
 
     if (executable_running == 1) {
-      SDL_FreeSurface(title);
-      SDL_FreeSurface(title_pr);
       if ((option == 0) && can_continue) {
-        DungeonPlay("SaveAP.sav");
+        DungeonPlay(1);
       } else {
         if (option == (0 + can_continue)) {
           training = 0;
-          DungeonPlay("");
+          DungeonPlay(0);
         } else {
           training = 1;
-          DungeonPlay("");
+          DungeonPlay(0);
         }
       }
       // clean up
@@ -738,6 +670,256 @@ int main(int argc, char **argv)
   SDL_DestroyRenderer(renderer);
   SDL_Quit();
   return 0;
+}
+
+void HandleTitleScreen() {
+  int on_title = 1;
+  int ticker_tick = 0;
+  int tick = 10000000;
+  int precalc_sine[400];
+  int can_continue;
+  int pulse[SCREEN_W * SCREEN_H];
+  int i, x, y;
+  int option = 0;
+  int maxoptions = 2;
+  int last_key = 0;
+  Uint8* src_p, * col_p;
+  SDL_Surface *title, *title_pr;
+
+  char url[32] = { '\0' };
+  char port[8] = { '\0' };
+  char slotname[32] = { '\0' };
+  char password[32] = { '\0' };
+  int archipelago_menu = 0;
+  int connection_arrow_offset = 0;
+
+  strcpy(url, "archipelago.gg");
+  strcpy(port, "38281");
+
+  title = IMG_Load("dat/i/title.png");
+  title_pr = IMG_Load("dat/i/title.png");
+  for (i = 0; i < 400; i++) {
+    precalc_sine[i] = sin((float)i / 400 * M_PI * 2) * 24 + 24;
+  }
+
+  if (IsSaveFile()) {
+    can_continue = 1;
+  } else {
+    can_continue = 0;
+  }
+
+  for (i = 0; i < screen->w * screen->h; i++) {
+    x = i % SCREEN_W;
+    y = i / SCREEN_W;
+
+    pulse[i] = dist(x, y, SCREEN_W / 2, SCREEN_H / 2);
+  }
+
+  while (on_title == 1) {
+    SetTitlePalette2(ticker_tick);
+    col_p = (Uint8*)title_pr->pixels;
+    src_p = (Uint8*)title->pixels;
+    if ((tick % 10) == 0) {
+      for (i = 0; i < 640 * 480; i++) {
+        *(col_p++) = Uint8_Bound(*(src_p++) + precalc_sine[(pulse[i] + tick) % 400]);
+      }
+    }
+    SDL_BlitSurface(title_pr, NULL, screen, NULL);
+    draw_text(17, 156, MERITOUS_VERSION, 225 + sin((float)ticker_tick / 15) * 30);
+    if (isArchipelago()) draw_text(0, 450, "AP Enabled", 255);
+
+    // new start menu
+    if (menu_screen == MENU_APENABLED) {
+      maxoptions = 2;
+
+      draw_text((SCREEN_W - 14 * 8) / 2, 310, "Archipelago", 255);
+      draw_text((SCREEN_W - 14 * 8) / 2, 320, "Local randomiser", 255);
+
+    }
+
+    // main title screen
+    else if (menu_screen == MENU_GAMEMODE) {
+
+      if (can_continue) {
+        draw_text((SCREEN_W - 14 * 8) / 2, 310, "Continue", 255);
+        maxoptions = 3;
+      }
+      else {
+        maxoptions = 2;
+      }
+
+      draw_text((SCREEN_W - 14 * 8) / 2, 310 + can_continue * 10, "New Game", 255);
+      draw_text((SCREEN_W - 14 * 8) / 2, 320 + can_continue * 10, "New Game (Training mode)", 255);
+
+    }
+    // archipelago
+    else if (menu_screen == MENU_CONNECTION) {
+      maxoptions = 7;
+
+      draw_text((SCREEN_W - 24 * 8) / 2, 310, "URL", 255);
+      draw_text((SCREEN_W - 24 * 8) / 2, 320, "Port", 255);
+      draw_text((SCREEN_W - 24 * 8) / 2, 330, "Slotname", 255);
+      draw_text((SCREEN_W - 24 * 8) / 2, 340, "Password", 255);
+
+      draw_text((SCREEN_W - 24 * 8) / 2, 360, "Connect", 255);
+      draw_text((SCREEN_W - 24 * 8) / 2, 370, "Cancel", 255);
+
+      draw_text((SCREEN_W + 2 * 8) / 2, 310, url, 255);
+      draw_text((SCREEN_W + 2 * 8) / 2, 320, port, 255);
+      draw_text((SCREEN_W + 2 * 8) / 2, 330, slotname, 255);
+
+      int pwd_len = strlen(password);
+      char* asterisks = malloc(pwd_len + 1);
+      memset(asterisks, '*', pwd_len);
+      asterisks[pwd_len] = '\0';
+      draw_text((SCREEN_W + 2 * 8) / 2, 340, asterisks, 255);
+    }
+
+
+    if (ticker_tick >= 30) {
+      connection_arrow_offset = menu_screen == MENU_CONNECTION ? 1 : 0;
+      draw_text((SCREEN_W - (14 + connection_arrow_offset * 10) * 8) / 2 - 17, 310 + option * 10, "-", 205 + sin((float)ticker_tick / 5.0) * 24);
+      draw_text((SCREEN_W - (14 + connection_arrow_offset * 10) * 8) / 2 - 20, 310 + option * 10, " >", 205 + sin((float)ticker_tick / 5.0) * 24);
+      draw_text((SCREEN_W - (14 + connection_arrow_offset * 10) * 8) / 2 - 19, 310 + option * 10, " >", 190 + sin((float)ticker_tick / 5.0) * 24);
+      draw_text((SCREEN_W - (14 + connection_arrow_offset * 10) * 8) / 2 - 21, 310 + option * 10, " >", 190 + sin((float)ticker_tick / 5.0) * 24);
+      draw_text((SCREEN_W - (14 + connection_arrow_offset * 10) * 8) / 2 - 18, 310 + option * 10, " >", 165 + sin((float)ticker_tick / 5.0) * 24);
+      draw_text((SCREEN_W - (14 + connection_arrow_offset * 10) * 8) / 2 - 22, 310 + option * 10, " >", 165 + sin((float)ticker_tick / 5.0) * 24);
+    }
+
+    VideoUpdate();
+
+    if (ticker_tick++ > 30) {
+      HandleEvents();
+
+      // archipelago vs local randomiser
+      if (menu_screen == MENU_APENABLED) {
+        if (key_held[K_UP]) {
+          if (last_key != 1)
+            if (option > 0) option--;
+          last_key = 1;
+        }
+        else {
+          if (key_held[K_DN]) {
+            if (last_key != 2)
+              if (option < maxoptions - 1) option++;
+            last_key = 2;
+          }
+          else {
+            last_key = 0;
+            if (key_held[K_SP] || enter_pressed) {
+              if (option == 0) {
+                menu_screen = MENU_CONNECTION;
+                archipelago_menu = 1;
+              }
+              else if (option == 1) {
+                menu_screen = MENU_GAMEMODE;
+                archipelago_menu = 0;
+              }
+            }
+          }
+        }
+
+        if (voluntary_exit) {
+          //executable_running = 0;
+          on_title = 0;
+          SDL_Quit();
+          exit(0);
+        }
+      }
+
+      // main title screen
+      else if (menu_screen == MENU_GAMEMODE) {
+        if (key_held[K_UP]) {
+          if (last_key != 1)
+            if (option > 0) option--;
+          last_key = 1;
+        }
+        else {
+          if (key_held[K_DN]) {
+            if (last_key != 2)
+              if (option < maxoptions - 1) option++;
+            last_key = 2;
+          }
+          else {
+            last_key = 0;
+            if (key_held[K_SP] || enter_pressed) {
+              on_title = 0;
+            }
+          }
+        }
+
+        if (voluntary_exit) {
+          //executable_running = 0;
+          voluntary_exit = 0;
+          if (archipelago_menu) menu_screen = MENU_CONNECTION;
+          else menu_screen = MENU_APENABLED;
+          option = 0;
+        }
+      }
+
+      // archipelago
+      else if (menu_screen == MENU_CONNECTION) {
+        if (menu_key_held[K_UP]) {
+          if (last_key != 1)
+            if (option > 0) {
+              option--;
+              if (option == 4) option--;
+            }
+          last_key = 1;
+        }
+        else if (menu_key_held[K_DN]) {
+          if (last_key != 2)
+            if (option < maxoptions - 1) {
+              option++;
+              if (option == 4) option++;
+            }
+          last_key = 2;
+        }
+        else if (key_held[K_BS]) {
+          if (last_key != K_BS) {
+            if (option == 0) url[strlen(url) - 1] = '\0';
+            else if (option == 1) port[strlen(port) - 1] = '\0';
+            else if (option == 2) slotname[strlen(slotname) - 1] = '\0';
+            else if (option == 3) password[strlen(password) - 1] = '\0';
+            last_key = K_BS;
+          }
+        }
+        else if (typed_key != ' ') {
+          if (option == 0 && strlen(url) < 31) url[strlen(url)] = typed_key;
+          else if (option == 1 && strlen(port) < 7) port[strlen(port)] = typed_key;
+          else if (option == 2 && strlen(slotname) < 31) slotname[strlen(slotname)] = typed_key;
+          else if (option == 3 && strlen(password) < 31) password[strlen(password)] = typed_key;
+          typed_key = ' ';
+        }
+        else {
+          last_key = 0;
+          if (key_held[K_SP] || enter_pressed) {
+            if (option == 5) {
+              menu_screen = MENU_GAMEMODE;
+              option = 0;
+            }
+            else if (option == 6) {
+              menu_screen = MENU_APENABLED;
+              option = 0;
+            }
+          }
+        }
+
+        if (voluntary_exit) {
+          voluntary_exit = 0;
+          menu_screen = MENU_APENABLED;
+          option = 0;
+        }
+      }
+    }
+
+    EndCycle(10);
+
+    //light = 0;
+    tick -= 2;
+  }
+  SDL_FreeSurface(title);
+  SDL_FreeSurface(title_pr);
 }
 
 void DrawMeter(int x, int y, int n)
@@ -862,7 +1044,7 @@ void ComposeTime(char *ptr, int msec, char displayMsec) {
   else sprintf(ptr, buf);
 }
 
-int DungeonPlay(const char *fname)
+int DungeonPlay(const int continueGame)
 {
   int ix,  iy;
   int off_x, off_y;
@@ -881,8 +1063,8 @@ int DungeonPlay(const char *fname)
 
   expired_ms = 0;
   LoadingScreen(0, 0.0);
-  if (fname[0] != 0) {
-    LoadGame(fname);
+  if (continueGame) {
+    LoadGame();
   }
 
   RandomGenerateMap();
@@ -1460,13 +1642,17 @@ void HandleEvents()
     while (SDL_PollEvent(&event)) {
       if (event.type == SDL_KEYDOWN) {
         switch (event.key.keysym.sym) {
-          case SDLK_w:
           case SDLK_UP:
+            menu_key_held[K_UP] = 1;
+            // fallthrough
+          case SDLK_w:
             key_held[K_UP] = 1;
             CancelVoluntaryExit();
             break;
-          case SDLK_s:
           case SDLK_DOWN:
+            menu_key_held[K_DN] = 1;
+            // fallthrough
+          case SDLK_s:
             key_held[K_DN] = 1;
             CancelVoluntaryExit();
             break;
@@ -1516,11 +1702,16 @@ void HandleEvents()
             break;
           case SDLK_h:
             CancelVoluntaryExit();
-            ShowHelp();
+            if (menu_screen != MENU_CONNECTION) {
+              ShowHelp();
+            }
             break;
           case SDLK_p:
             game_paused ^= 1;
             CancelVoluntaryExit();
+            break;
+          case SDLK_BACKSPACE:
+            key_held[K_BS] = 1;
             break;
 
 #ifdef DEBUG_KEYS
@@ -1576,12 +1767,16 @@ void HandleEvents()
       }
       if (event.type == SDL_KEYUP) {
         switch (event.key.keysym.sym) {
-          case SDLK_w:
           case SDLK_UP:
+            menu_key_held[K_UP] = 0;
+            // fallthrough
+          case SDLK_w:
             key_held[K_UP] = 0;
             break;
-          case SDLK_s:
           case SDLK_DOWN:
+            menu_key_held[K_DN] = 0;
+            // fallthrough
+          case SDLK_s:
             key_held[K_DN] = 0;
             break;
           case SDLK_a:
@@ -1598,9 +1793,15 @@ void HandleEvents()
           case SDLK_c:
             key_held[K_c] = 0;
             break;
+          case SDLK_BACKSPACE:
+            key_held[K_BS] = 0;
+            break;
           default:
             break;
         }
+      }
+      if (event.type == SDL_TEXTINPUT) {
+        typed_key = event.text.text[0];
       }
       if (event.type == SDL_QUIT) {
         voluntary_exit = 1;

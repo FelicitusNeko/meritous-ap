@@ -30,6 +30,7 @@
 #include "save.h"
 #include "levelblit.h"
 #include "itemhandler.h"
+#include "demon.h"
 
 void NewLevel();
   
@@ -40,6 +41,16 @@ int Generate();
 int DoRepeat = 0;
 
 int place_of_power = 0;
+
+int boss_room_interval; // weapon or boss room interval, ie rooms_to_gen/6. Original is 500
+
+int max_dist = 0; // distance of furthest room, capped at 50. Used for small dungeon scaling
+float dist_scaling = 1.0f; // factor to multiply room.s_dist for anything distance related
+
+// vanilla does calculations based on a max dist of 50, but can gen dungeons with higher than 50.
+// we then mimic this overshooting for small dungeons too, to try to keep the proportion of difficult/far rooms the same.
+// generated 50 vanilla worlds and got their average max_dist (51.4) so for calculations we'll use 50/51.4 (ie 97.276%) of the actual max distance
+const float max_dist_overshoot = 0.97276f;
 
 struct RoomConnection {
   int x, y;
@@ -146,6 +157,11 @@ void ReadRoomData(Room *rm)
     rm->con->c = FRInt();
     rm->con->n = rt;
   }
+
+  // keep track of the furthest distance in preparation for small dungeon scaling
+  if (rm->s_dist > max_dist) {
+    max_dist = rm->s_dist;
+  }
 }
 
 void WriteMapData()
@@ -194,6 +210,15 @@ void ReadMapData()
     }
   }
   LoadingScreen(1, 1);
+
+  // calculate distance scaling for smaller dungeons, to ensure the harder enemies still spawn and caches still appear
+  // vanilla uses 50 for calculations and guarantees the dungeon is at least that size but can still be higher, so we let smaller dungeons "overshoot" as well
+  if (max_dist >= 50) {
+    dist_scaling = 1.0f;
+  }
+  else if (max_dist > 2) {
+    dist_scaling = 50.0f / ((float)max_dist * max_dist_overshoot);
+  }
 }
 
 int rndval(int a, int b)
@@ -221,13 +246,14 @@ void RandomGenerateMap()
   if (game_load) {
     NewLevel();
     ReadMapData();
+    InitEnemies();
   } else {
     NewLevel();
+    boss_room_interval = rooms_to_gen / 6;
     while (trying) {
     
       trying = !Generate();
     }
-    InitStores();
   }
   //SaveLevel();
 }
@@ -489,12 +515,11 @@ void DrawRoom(int place_x, int place_y, int room_w, int room_h, int room_id)
     Paint(place_x+1, place_y+1, room_w-2, room_h-2, "dat/d/centre.loc");
   }
   // Power object rooms
-  // TODO: make this code not assume that x499 and x999 are special rooms
-  if ((room_id % 1000) == 499) {
+  if ((room_id % (boss_room_interval * 2)) == boss_room_interval-1) {
     Paint(place_x+1, place_y+1, room_w-2, room_h-2, "dat/d/weapon.loc");
   }
   // Boss rooms
-  if ((room_id % 1000) == 999) {
+  if ((room_id % (boss_room_interval * 2)) ==  (boss_room_interval * 2) - 1) {
     Paint(place_x+1, place_y+1, room_w-2, room_h-2, "dat/d/bossroom.loc");
   }
 }
@@ -559,11 +584,11 @@ void MakeConnect(int x, int y, int type)
   
   room_1 = GetRoom(x, y);
   room_2 = GetRoom(nx, ny);
-  if ((room_1 % 1000) == 999) {
+  if ((room_1 % (boss_room_interval * 2)) == (boss_room_interval * 2) - 1) {
     d1 = d1 - 13 + 21;
     d2 = d2 - 13 + 38;
   } else {
-    if ((room_2 % 1000) == 999) {
+    if ((room_2 % (boss_room_interval * 2)) == (boss_room_interval * 2) - 1) {
       d1 = d1 - 13 + 38;
       d2 = d2 - 13 + 21;
     }
@@ -745,7 +770,7 @@ int AddChild(int room_id)
   while (trying) {
     attempts++;
     
-    if (( (total_rooms+1) % 500)==0) {
+    if (( (total_rooms+1) % boss_room_interval)==0) {
       new_w = 20;
       new_h = 15;
     } else {
@@ -838,9 +863,10 @@ void MakeSpecialRooms()
   int x, y;
   
   // Special rooms are:
-  // - Boss rooms @ 500, 1000, 1500, 2000, 2500, 3000
+  // - Boss rooms @ rooms_to_gen/6, rooms_to_gen*2/6, *3, *4, *5, *6, ie boss_room_interval*(1 to 6)
   // - Artifact rooms (biggest non-boss room of a given tier)
   //		Tiers: 5-9  10-14  15-19  20-24  25-29  30-34  35-39  40-44
+  //    Note room distance is multiplied by 50/max_dist before checking tier
   
 //  // boss rooms
 //   for (i = 0; i < 3; i++) {
@@ -857,7 +883,7 @@ void MakeSpecialRooms()
 
   // boss and power object rooms
   for (i = 0; i < 6; i++) {
-    c_room = (rooms_to_gen / 6 * (i + 1)) - 1;
+    c_room = (boss_room_interval * (i + 1)) - 1;
     rooms[c_room].room_type = i % 2 ? 2 : 5;
     rooms[c_room].room_param = i / 2;
   }
@@ -867,8 +893,8 @@ void MakeSpecialRooms()
     biggest_room_sz = 0;
     for (c_room = 0; c_room < rooms_to_gen; c_room++) {
       if (rooms[c_room].room_type == 0) {
-        if (rooms[c_room].s_dist >= (c_tier*5+5)) {
-          if (rooms[c_room].s_dist <= (c_tier*5+9)) {
+        if (rooms[c_room].s_dist * dist_scaling >= (c_tier*5+5)) {
+          if (rooms[c_room].s_dist * dist_scaling <= (c_tier*5+9)) {
             if (RoomSize(c_room) > biggest_room_sz) {
               biggest_room_sz = RoomSize(c_room);
               biggest_room_n = c_room;
@@ -892,7 +918,7 @@ void MakeSpecialRooms()
     
     //printf("Artifact room for tier %d is room %d (size %d), with artifact %d\n", c_tier, biggest_room_n, biggest_room_sz, ctyp);
   }
-  
+
   // place of power
   // The room with the highest s_dist that is not of any other type
   
@@ -939,8 +965,11 @@ int Generate()
   int attempts = 0;
   int i;
   int correct_dist = 0;
-  int maxdist = 0;
+  max_dist = 0;
   rdir = rand()%4;
+
+  DestroyThings();
+
   NewRoom(map.w / 2 - 20 / 2, map.h / 2 - 15 / 2, 20, 15, -1);
   
   for (attempts = 0; attempts < 100000; attempts++) {
@@ -961,13 +990,17 @@ int Generate()
   RecurseSetDist();
   
   for (i = 0; i < rooms_to_gen; i++) {
-    if (rooms[i].s_dist > maxdist) {
-      maxdist = rooms[i].s_dist;
+    if (rooms[i].s_dist > max_dist) {
+      max_dist = rooms[i].s_dist;
     }
     
-    if (rooms[i].s_dist >= 50) {
+    // this was originally used to enforce the dungeon was at least a certain size so that it generates all the things that are based off of distance correctly
+    // now we'll scale things based on the furthest room so this isn't really doing much anymore outside of original room counts
+    int required_distance = (int)(((float)rooms_to_gen / 3000.0) * 50);
+    if (rooms[i].s_dist >= required_distance) {
       correct_dist = 1;
     }
+
   }
   
   if (correct_dist == 0) {
@@ -976,12 +1009,33 @@ int Generate()
     ResetLevel();
     return 0;
   }
+
+  // calculate distance scaling for smaller dungeons, to ensure the harder enemies still spawn and caches still appear
+  // vanilla uses 50 for calculations and guarantees the dungeon is at least that size but can still be higher, so we let smaller dungeons "overshoot" as well
+  if (max_dist >= 50) {
+    dist_scaling = 1.0f;
+  } 
+  else {
+    dist_scaling = 50.0f / ((float)max_dist * max_dist_overshoot);
+  }
   
   //printf("Rooms: %d\n", total_rooms);
   
   MakeSpecialRooms();
   
   map.totalRooms = total_rooms;
+
+  InitEnemies();
+
+  // enforce a minimum crystal count to avoid getting shafted by smaller dungeons being much more volatile.
+  // the aim is to have at least as little as the worst vanilla worlds
+  // the value 250000 is from test gens of 3000 rooms, with it only genning below 250000 twice in 36 attempts
+  if (expected_total_gems < 250000.0f) {
+    DoRepeat = 0;
+    ResetLevel();
+    return 0;
+  }
+
   return 1;
 }
 

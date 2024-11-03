@@ -799,6 +799,26 @@ void SavingScreen(int part, float progress)
   ClearInput();
 }
 
+void ConnectionScreen(char* message)
+{
+  ProgressBarScreen(0, 0.0, message, 3.0);
+  ClearInput();
+}
+
+void ConnectionFailedScreen(char* line1, char* line2, char* line3)
+{
+  memset(screen->pixels, 0, 640 * 480 * 4);
+
+  DrawRect(150, 217, 340, 60, 80);
+  DrawRect(152, 219, 336, 56, 20);
+  draw_text(252, 228, line1, 255);
+  draw_text(182, 244, line2, 255);
+  draw_text(182, 260, line3, 255);
+
+  VideoUpdate();
+  DummyEventPoll();
+}
+
 void Arc(SDL_Surface *s, int x, int y, int r, float dir)
 {
   int bright;
@@ -880,13 +900,32 @@ int DungeonPlay(const char *fname)
   char buf[50];
 
   expired_ms = 0;
-  LoadingScreen(0, 0.0);
+
+  if (isArchipelago()) {
+    ConnectionScreen("Connecting to AP server...");
+  }
+  else {
+    LoadingScreen(0, 0.0);
+  }
+
+  // start the ap connection early as we need the room count before we generate
+  StartRando();
+
+  // needs to be done before connection is fully established
+  InitStores();
+
+  int aborted = WaitForConnection();
+  if (aborted) {
+    return;
+  }
+
+  LoadingScreen(1, 0.0);
+
   if (fname[0] != 0) {
     LoadGame(fname);
   }
 
   RandomGenerateMap();
-  InitEnemies();
   InitBossVars();
 
   PlayerDefaultStats();
@@ -914,8 +953,6 @@ int DungeonPlay(const char *fname)
       max_dist = rooms[i].s_dist;
     }
   }
-
-  StartRando();
 
   game_running = 1;
   while (game_running) {
@@ -1150,7 +1187,7 @@ int DungeonPlay(const char *fname)
     if (!tele_select) {
       sprintf(buf, "Psi Crystals: %d", player_gems);
       draw_text(3, 3, buf, 200);
-      sprintf(buf, "Explored: %.1f%% (%d/%d rooms)", (float)explored/30.0, explored, rooms_to_gen);
+      sprintf(buf, "Explored: %.1f%% (%d/%d rooms)", (float)explored/((float)rooms_to_gen/100.0), explored, rooms_to_gen);
       draw_text(3, 11, buf, 200);
       sprintf(buf, "Cleared: %.1f%% (%d/%d monsters)", (float)killed_enemies/(float)total_enemies*100.0, killed_enemies, total_enemies);
       draw_text(3, 19, buf, 200);
@@ -2883,5 +2920,40 @@ void ThinLine(SDL_Surface *scr, int x1, int y1, int x2, int y2, Uint8 col)
       DrawRect(j+x1, i+y1, 1, 1, col);
     }
   }
+}
+
+// waits until a successful connection is made to the archipelago server. Requires stores to be initialised beforehand
+int WaitForConnection() {
+  if (!isArchipelago()) return 0;
+
+  char* currentStatus = GetAPStatus();
+  int displayedScreen = 0;
+
+  while (strcmp(GetAPStatus(), "Connected") != 0) {
+    PollAPClient();
+    VideoUpdate();
+    HandleEvents();
+    currentStatus = GetAPStatus();
+
+    if (strcmp(currentStatus, "InvalidSlot") == 0 && displayedScreen != 1) {
+      displayedScreen = 1;
+      ConnectionFailedScreen("Connection refused", "Please check your meritous-ap.json", "then restart the game");
+    }
+
+    if (strcmp(currentStatus, "Disconnected") == 0 && displayedScreen != 2) {
+      displayedScreen = 2;
+      ConnectionFailedScreen("Connection disconnected", "Please try again", "");
+    }
+
+    // go back to title screen if connection aborted (esc or pressing x on window)
+    if (voluntary_exit) {
+      voluntary_exit = 0;
+      EndRando();
+      DestroyStores();
+      return 1;
+    }
+    EndCycle(0);
+  }
+  return 0;
 }
 

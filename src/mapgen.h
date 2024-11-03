@@ -55,6 +55,7 @@ typedef struct {
 
 extern GameLevel map;
 extern Room rooms[3000];
+extern float dist_scaling;
 
 void RandomGenerateMap();
 
@@ -70,6 +71,8 @@ void ReadMapData();
 void DestroyDungeon();
 
 void Paint(int xp, int yp, int w, int h, char *fname);
+
+extern int max_dist; // actual max distance of dungeon. Guaranteed to be at least 50 in vanilla
 
 #endif
 

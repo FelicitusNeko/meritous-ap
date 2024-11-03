@@ -32,6 +32,7 @@
 #include "mapgen.h"
 #include "itemhandler.h"
 #include "stats.h"
+#include "demon.h"
 
 void DrawScrolly(int t);
 void DrawPText(int t);
@@ -365,11 +366,16 @@ char *credits[] = {
 
 void DrawStats()
 {
+  int room_scaling_debug_stats = 0; // manually set this to 1 to output room scaling related logs
+
   char buf[30] = {0};
+
+  char kills[11] = { '\0' };
+  sprintf(kills, "%d/%d", get_int_stat(STAT_KILLS), total_enemies);
 
   draw_text_f(66, 30, "Circuit bursts     %9d", 192, get_int_stat(STAT_BURSTS));
   draw_text_f(66, 40, "Successful hits    %9d", 168, get_int_stat(STAT_HITS));
-  draw_text_f(66, 50, "Kills              %9d", 192, get_int_stat(STAT_KILLS));
+  draw_text_f(66, 50, "Kills            %11s", 192, kills);
   draw_text_f(66, 60, "Resisted hits      %9d", 168, get_int_stat(STAT_RESISTS));
   draw_text_f(66, 70, "Misses             %9d", 192, get_int_stat(STAT_WHIFFS));
   draw_text_f(66, 80, "Total discharged     %7.1f", 168, get_float_stat(STAT_CIRCUIT_VALUE));
@@ -394,7 +400,12 @@ void DrawStats()
     draw_text(350, 130, "Time to Agate Knife", 168);
     ComposeTime(buf, get_int_stat(STAT_TIME_KNIFE), 1);
     draw_text_f(350, 140, "%28s", 192, buf);
-  } else draw_text_f(350, 130, "Rooms explored     %9d", 168, explored);
+  }
+  else {
+    char explored_fraction[10] = { '\0' };
+    sprintf(explored_fraction, "%d/%d", explored, rooms_to_gen);
+    draw_text_f(350, 130, "Rooms explored     %9s", 168, explored_fraction);
+  }
 
   draw_text(176, 200, "Tries      Time spent fighting              Time beaten", 192);
   for (int x = 0; x < 4; x++) {
@@ -410,6 +421,12 @@ void DrawStats()
     }
   }
 
+  if (room_scaling_debug_stats) {
+    draw_text_f(20, 280, "Debug stats:", 192);
+    draw_text_f(20, 290, "Average Gems Left  %9.1f", 168, average_gems);
+    draw_text_f(20, 300, "^ After Multiplier %9.1f", 192, expected_total_gems);
+    draw_text_f(350, 290, "Max room distance  %9d", 168, max_dist);
+  }
 }
 
 void ShowBadEndingStats()

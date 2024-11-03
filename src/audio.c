@@ -128,29 +128,29 @@ void BackgroundMusic()
 	int new_track = -1;
 	Mix_VolumeMusic(96);
 	
-	if (rooms[player_room].s_dist <= 15) {
+	if (rooms[player_room].s_dist * dist_scaling <= 15) {
 			new_track = 0;
 	}
 	
 	if (bgm_track == 1) {
-		if ((rooms[player_room].s_dist <= 30) && (rooms[player_room].s_dist >= 10)) {
+		if ((rooms[player_room].s_dist * dist_scaling <= 30) && (rooms[player_room].s_dist * dist_scaling >= 10)) {
 			new_track = 1;
 		}
 	}
 	if (bgm_track == 2) {
-		if ((rooms[player_room].s_dist <= 45) && (rooms[player_room].s_dist >= 25)) {
+		if ((rooms[player_room].s_dist * dist_scaling <= 45) && (rooms[player_room].s_dist * dist_scaling >= 25)) {
 			new_track = 2;
 		}
 	}
 	
 	if (new_track == -1) {
-		if ((rooms[player_room].s_dist <= 30) && (rooms[player_room].s_dist >= 16)) {
+		if ((rooms[player_room].s_dist * dist_scaling <= 30) && (rooms[player_room].s_dist * dist_scaling >= 16)) {
 			new_track = 1;
 		}
-		if ((rooms[player_room].s_dist <= 39) && (rooms[player_room].s_dist >= 31)) {
+		if ((rooms[player_room].s_dist * dist_scaling <= 39) && (rooms[player_room].s_dist * dist_scaling >= 31)) {
 			new_track = 2;
 		}
-		if (rooms[player_room].s_dist >= 40) {
+		if (rooms[player_room].s_dist * dist_scaling >= 40) {
 			new_track = 3;
 		}
 	}

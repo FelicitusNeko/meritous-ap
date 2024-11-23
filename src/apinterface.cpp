@@ -257,8 +257,8 @@ void ConnectAP()
     ap_connect_sent = true; // TODO: move to APClient::State ?
   });
   ap->set_slot_connected_handler([](const json& data){
-    if (data.find("death_link") != data.end() && data["death_link"].is_boolean())
-      deathlink = data["death_link"].get<bool>();
+    if (data.find("death_link") != data.end() && data["death_link"].is_number_integer())
+      deathlink = data["death_link"].get<int>() == 1;
     else deathlink = false;
 
     if (data.find("goal") != data.end() && data["goal"].is_number_integer())

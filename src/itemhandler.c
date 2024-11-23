@@ -370,7 +370,7 @@ void KillPlayer(const char *from) {
 
 void AnnounceDeath() {
   if (!isArchipelago() || !isDeathLink()) return;
-  if (SendDeathLink() && !deathlink_announced) PostMessage(74, 120, 0);
+  if (!deathlink_announced && SendDeathLink()) PostMessage(74, 120, 0);
   deathlink_announced = 0;
 }
 

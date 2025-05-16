@@ -301,7 +301,7 @@ void ConnectAP()
     for (const auto& item: items) {
       auto itemname = ap->get_item_name(item.item, ap->get_player_game(item.player));
       auto sender = item.player ? (ap->get_player_alias(item.player) + "'s world") : "out of nowhere";
-      auto location = ap->get_location_name(item.location);
+      auto location = ap->get_location_name(item.location, ap->get_player_game(item.player));
 
       printf("  #%d: %s (%" PRId64 ") from %s - %s\n",
               item.index, itemname.c_str(), item.item,

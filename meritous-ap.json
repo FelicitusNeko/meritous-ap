@@ -1,0 +1,7 @@
+{
+    "ap-enable": false,
+    "server": "wss://archipelago.gg",
+    "port": 38281,
+    "password": null,
+    "slotname": "Player"
+}

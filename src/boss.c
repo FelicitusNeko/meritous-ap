@@ -86,6 +86,8 @@ char *artifact_names[] = {
   "Cursed Seal of Yahveh"
 };
 
+void LockDoors(int room);
+void BossRoom(int room);
 int CanGetArtifact();
 void DrawArtifactOverhead(int p_obj);
 

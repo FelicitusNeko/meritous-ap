@@ -2601,7 +2601,8 @@ void SpecialTile(int x, int y)
       break;
     case 42:
       if (rooms[player_room].room_type == 5) {
-        if (!CanGetArtifact(rooms[player_room].room_param)) {
+        //if (!CanGetArtifact(rooms[player_room].room_param)) {
+        if (!CanGetArtifact()) {
           sprintf(message, "The artifact is tainted with shadow. You must slay more of the shadow first.");
         }
       }

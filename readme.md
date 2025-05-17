@@ -52,15 +52,31 @@ In a future update, for ease of use, this process will be moved into in-game men
 
 The player configuration file (also known as YAML) will determine the generation parameters for the game. To obtain one, refer to either [the official Archipelago settings page for this game](https://archipelago.gg/games/Meritous/player-settings), or [the unofficial Archipelago Settings Tool](https://lowbiasgaming.net/archipelago) for more advanced options, including the option to randomize which game will be played.
 
+## Configuring playlist
+
+The file `dat/m/manifest.json` contains the playlist currently used for the game. This file can be changed if different songs are desired. In general, any tracker format songs supported under libxmp can be used. Formats such as mp3, ogg, etc. might also be used, but these are untested.
+
+Track name|Description
+--|--
+`title`|Used on the title screen/menu.
+`cave1-4`| Used in the Atlas Dome. Which one is played depends on how far from the Entrance the player is.
+`ambush`|Used in active Artifact rooms, which contain enemy ambushes and chests.
+`boss1-3`| Used during standard bosses. `boss1` is also used during the final form of the true final boss.
+`chase`|Used after collecting the Cursed Seal, as the player returns to the Entrance.
+`finale`|Used during the final boss.
+`truefinal`|Used during the second form of the true final boss.
+`ending`|Used during the ending sequence.
+
 ## Building Meritous
 
 Meritous Gaiden depends on the following libraries:
 
 - SDL 2
-  - SDL-image
-  - SDL-mixer
+  - SDL2-image
+  - SDL2-mixer
 - zlib
 - libpng
+- asio <= 1.32
 
 In addition, under Windows, the Winsock library is required for the Archipelago client component to work, and `windres` is recommended to compile the RC file.
 
@@ -72,6 +88,6 @@ Thanks to Lancer-X's beta testers: Quasar, Terryn and Wervyn, for their hard wor
 
 Thanks to Kewlio's beta testers: MazukiTskiven, alwaysontreble, and the Archipelago community in general, for continuing support in this endeavor.
 
-Thanks to code contributors: @jknorr1992
+Thanks to code contributors: @jknorr1992, @Rnd-Guy
 
 Special thanks to Frankomatic for streaming Meritous at just the right time to give Kewlio the idea to do this in the first place.

@@ -51,17 +51,18 @@ OBJS = 	src/levelblit.o \
 #
 default:	meritous
 
+debug: LDFLAGS += -mconsole
 debug: CCFLAGS += -g -D DEBUG
 debug: meritous
 
 debug_linux: CCFLAGS += -g -D DEBUG
 debug_linux: meritous_linux
 
+jsonmusic.o: src/jsonmusic.cpp
+		g++ -c $? -o $@ -Isrc/submodules/json/include ${DEFINES} ${CCFLAGS}
+
 # this is your cpp code that bridges between apclientpp and the game
 apinterface.o: src/apinterface.cpp
-		g++ -c $? -o $@ ${AP_INCLUDES} ${AP_DEFINES} ${CCFLAGS}
-
-wswrap.o: src/submodules/wswrap/src/wswrap.cpp
 		g++ -c $? -o $@ ${AP_INCLUDES} ${AP_DEFINES} ${CCFLAGS}
 
 %.o:		%.c
@@ -70,12 +71,12 @@ wswrap.o: src/submodules/wswrap/src/wswrap.cpp
 meritous.res: meritous.rc
 		windres $? -O coff -o $@
 
-meritous:	${OBJS} apinterface.o meritous.res
-		g++ -o $@ ${OBJS} apinterface.o meritous.res ${AP_LIBS} ${AP_WIN_LIBS} ${LDFLAGS}
+meritous:	${OBJS} jsonmusic.o apinterface.o meritous.res
+		g++ -o $@ ${OBJS} jsonmusic.o apinterface.o meritous.res ${AP_LIBS} ${AP_WIN_LIBS} ${LDFLAGS}
 
-meritous_linux: ${OBJS} apinterface.o
-		g++ -o meritous ${OBJS} apinterface.o ${AP_LIBS} ${LDFLAGS}
+meritous_linux: ${OBJS} jsonmusic.o apinterface.o
+		g++ -o meritous ${OBJS} jsonmusic.o apinterface.o ${AP_LIBS} ${LDFLAGS}
 
 clean:		
-		rm ${OBJS} wswrap.o apinterface.o
+		rm ${OBJS} jsonmusic.o apinterface.o
 

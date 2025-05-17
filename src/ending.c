@@ -347,6 +347,7 @@ char *credits[] = {
   "Additional gfx:             Riafeir",
   "AP beta testing:            MazukiTskiven, alwaysontreble,",
   "                            Archipelago community",
+  "Contributions:              jknorr1992, Rnd-Guy"
   "Music:                      ",
   "\"Ambient Light\"             Vogue of Triton",
   "\"Battle of Ragnarok\"        Frostbite",
@@ -356,11 +357,11 @@ char *credits[] = {
   "\"Forest Boss\"               Alexis Janson",
   "\"Catacombs Boss\"            Alexis Janson",
   "\"Fear 2\"                    Mick Rippon",
-  "\"The Final Battle\"          Goose/C�DA & iNVASiON",
+  "\"The Final Battle\"          Goose/CeDA & iNVASiON",
   "\"Ice Frontier\"              Skaven/FC",
   "\"KnarkLoader 1.0\"           Rapacious",
   "\"RPG-Battle\"                Cyn",
-  "\"Metallic Forest\"           Joseph Fox"
+  "\"Unlimited Happiness\"       Saga Musix"
 };
 
 void DrawStats()

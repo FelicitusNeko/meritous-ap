@@ -40,6 +40,7 @@
 #include "ending.h"
 #include "itemhandler.h"
 #include "stats.h"
+#include "jsonmusic.h"
 
 // this is here to make VSCodium behave
 #ifndef M_PI
@@ -49,7 +50,7 @@
 #define PLAYERW 16
 #define PLAYERH 24
 
-#define MERITOUS_VERSION "v 1.4"
+#define MERITOUS_VERSION "v 1.4.1"
 
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))
 #define MAX(a,b) (((a) > (b)) ? (a) : (b))
@@ -474,6 +475,8 @@ int main(int argc, char **argv)
   unsigned int stime = 0;
 
   FILE *wm_mask_file;
+
+  if (!LoadMusicManifest()) exit(1);
 
   if (argc > 1) {
     for (i = 1; i < argc; i++) {

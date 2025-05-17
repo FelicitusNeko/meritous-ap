@@ -31,20 +31,21 @@
 #include "mapgen.h"
 #include "boss.h"
 #include "itemdefs.h"
+#include "jsonmusic.h"
 
-char *tracks[13] = {"dat/m/ICEFRONT.S3M",
-					"dat/m/cavern.xm",
-					"dat/m/cave.xm",
-					"dat/m/cave06.s3m",
-					"dat/m/Wood.s3m",
-					"dat/m/iller_knarkloader_final.xm",
-					"dat/m/fear2.mod",
-					"dat/m/Cv_boss.mod",
-					"dat/m/Fr_boss.mod",
-					"dat/m/CT_BOSS.MOD",
-					"dat/m/rpg_bat1.xm",
-					"dat/m/amblight.xm",
-					"dat/m/FINALBAT.s3m"};
+char *tracks[13] = {"cave1",
+					"cave2",
+					"cave3",
+					"cave4",
+					"ambush",
+					"title",
+					"chase",
+					"boss1",
+					"boss2",
+					"boss3",
+					"finale",
+					"ending",
+					"truefinal"};
 
 Mix_Music *bgm_music = NULL;
 int bgm_track = -1;
@@ -118,7 +119,7 @@ void TitleScreenMusic()
 		bgm_music = NULL;
 	}
 	
-	bgm_music = Mix_LoadMUS(tracks[new_track]);
+	bgm_music = Mix_LoadMUS(GetTrack(tracks[new_track]));
 	Mix_PlayMusic(bgm_music, -1);	
 	bgm_track = new_track;
 }
@@ -192,7 +193,7 @@ void BackgroundMusic()
 		bgm_music = NULL;
 	}
 	if (new_track != -1) {
-		bgm_music = Mix_LoadMUS(tracks[new_track]);
+		bgm_music = Mix_LoadMUS(GetTrack(tracks[new_track]));
 		Mix_PlayMusic(bgm_music, -1);
 	}
 	bgm_track = new_track;

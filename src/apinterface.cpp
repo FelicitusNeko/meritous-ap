@@ -253,7 +253,7 @@ void ConnectAP()
   ap->set_room_info_handler([](){
     printf("Room info received\n");
     std::list<std::string> tags;
-    ap->ConnectSlot(slotname, password, 0b111, {"AP"}, {0,4,6});
+    ap->ConnectSlot(slotname, password, 0b111, {"AP"}, {0,6,0});
     ap_connect_sent = true; // TODO: move to APClient::State ?
   });
   ap->set_slot_connected_handler([](const json& data){

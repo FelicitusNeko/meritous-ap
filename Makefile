@@ -76,7 +76,8 @@ meritous:	${OBJS} jsonmusic.o apinterface.o meritous.res
 
 meritous_linux: ${OBJS} jsonmusic.o apinterface.o
 		g++ -o meritous ${OBJS} jsonmusic.o apinterface.o ${AP_LIBS} ${LDFLAGS}
+		touch meritous.res
 
 clean:		
-		rm ${OBJS} jsonmusic.o apinterface.o
+		rm ${OBJS} jsonmusic.o apinterface.o meritous.res
 

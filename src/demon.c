@@ -48,6 +48,16 @@ int fc_open = 0;
 
 int max_activate_dist = 0;
 
+const int hp_gem_value = 31337; // this specific value is checked against to determine if a crystal is actually a heart
+float fractional_crystals = 0.0f; // get back the crystals we lose due to casting crystal_value*crystal_scaling back to an int
+
+// room count balancing: how many gem drops are we expecting to see in this dungeon?
+float average_gems = 0.0f; 
+
+// room count balancing: after multiplierse, how many equivalent gem drops are we expecting to see in this dungeon? 
+// this is used to prevent dungeons genning with too few crystals
+float expected_total_gems = 0.0f; 
+
 // enemy
 
 int sqr(int x)
@@ -467,11 +477,11 @@ struct enemy *CreateEnemy(int enemy_x, int enemy_y, int enemy_room)
 {
 	int enemy_type;
 	
-	enemy_type = rand() % (rooms[enemy_room].s_dist / 5 + 1);
+	enemy_type = rand() % (int)((rooms[enemy_room].s_dist * dist_scaling) / 5 + 1);
 	if (rooms[enemy_room].room_type == 5) enemy_type += rand()%3;
 	if (enemy_type > 8) enemy_type = rand()%3+6;
 	
-	if (rooms[enemy_room].s_dist >= 15) {
+	if (rooms[enemy_room].s_dist * dist_scaling >= 15) {
 		if (rand()%64 == 0) {
 			enemy_type = 9;
 		}
@@ -603,7 +613,7 @@ struct enemy *CreateEnemyEx(int enemy_x, int enemy_y, int enemy_room, int enemy_
 		case 9:
 			new_enemy->image = enemy_sprites[0];
 			new_enemy->lives = 1;
-			new_enemy->str = rooms[enemy_room].s_dist * 20;
+			new_enemy->str = rooms[enemy_room].s_dist * dist_scaling * 20;
 			new_enemy->speed = 3;
 			new_enemy->fire_rate = 21;
 			new_enemy->min_gems = 300;
@@ -644,6 +654,7 @@ struct enemy *CreateEnemyEx(int enemy_x, int enemy_y, int enemy_room, int enemy_
 	AddEnemyPos(new_enemy);
 
 	total_enemies++;
+	average_gems += (new_enemy->min_gems + new_enemy->max_gems) / 2.0f;
 	
 	return new_enemy;
 }
@@ -667,7 +678,7 @@ void SCreateGem(int x, int y, int r, int v)
 	new_gem->x = x;
 	new_gem->y = y;
 	new_gem->room = r;
-new_gem->delete_me = 0;
+	new_gem->delete_me = 0;
 	new_gem->t = rand()%65536;
 	new_gem->next = gem_stack;
 	new_gem->next_in_room = room_gems[r];
@@ -688,10 +699,31 @@ void CreateGem(int x, int y, int r, int v)
 {
 	if (v == 0) return;
 	if ( (rand()%1000) < ((int)log(v)/4 + (player_hp == 1)*5 + 2) ) {
-		SCreateGem(x, y, r, 31337);
+		SCreateGem(x, y, r, hp_gem_value);
 	} else {
 		SCreateGem(x, y, r, v);
 	}
+}
+
+// creates a gem that gets scaled based on enemy count, for smaller dungeon balancing
+void CreateEnemyGem(int x, int y, int r, int v)
+{
+	if (v == 0) return;
+
+	float float_value = (float)v * crystal_scaling;
+	int value = (int)float_value;
+
+	// keep track of crystals lost from rounding errors, and add to the value if so
+	fractional_crystals += float_value - (float)value;
+	int whole_crystals = (int)fractional_crystals;
+	value += whole_crystals;
+	fractional_crystals -= (float)whole_crystals;
+
+	// just in case scaling accidentally makes a crystal hit the magic number for hearts
+	if (value == hp_gem_value) {
+		value += 1;
+	}
+	CreateGem(x, y, r, value);
 }
 
 float PlayerDir(int x, int y)
@@ -877,6 +909,8 @@ void InitEnemies()
 	int nx, ny;
 	
 	max_activate_dist = 0;
+	average_gems = 0.0f;
+	expected_total_gems = 0.0f;
 
 	InitEnemySprites();
 	
@@ -941,7 +975,15 @@ void InitEnemies()
 		}
 	}
 
+	// make up for the reduced number of enemies (and thus gems) on smaller room counts by multiplying crystal gain
+	// 10480 is roughly the average enemy count when I genned 50 vanilla dungeons rooms.
+	// however we cut off dungeons that gen with too fewer crystals, which bumps the average by a bit, so we'll use 10000 to tune it down
+	//    (eg. average of 8,9,10,11,12 and 6,8,10,12,14 are both 10 but if you remove values below 8, then average of the second set is now 11)
+	if (rooms_to_gen < 3000) crystal_scaling = 10000.0f / (float)total_enemies;
+	else crystal_scaling = 1.0f;
 
+	// expected crystal count in the dungeon after multipliers, to make sure it's not too low
+	expected_total_gems = crystal_scaling * average_gems;
 }
 
 int EnemyMovement(struct enemy *e, int move_x, int move_y)
@@ -1000,8 +1042,9 @@ void ActivateEnemies(int room)
 
 	t = enemy_stack;
 	
-	if (rooms[room].s_dist > max_activate_dist) {
-		max_activate_dist = rooms[room].s_dist;
+	// max_activate_dist is used to determine the enemy types that can be activated, the higher it is, the stronger the enemy can be
+	if ((int)(rooms[room].s_dist * dist_scaling) > max_activate_dist) {
+		max_activate_dist = rooms[room].s_dist * dist_scaling;
 	}
 
 	while (t != NULL) {
@@ -1216,7 +1259,7 @@ void ArtifactRoomUnlock(int room)
 	
 	// place treasure
 	placed = 0;
-	tot_treasures = 2 + rand() % (rooms[room].s_dist / 8 + 1);
+	tot_treasures = 2 + rand() % (int)((rooms[room].s_dist * dist_scaling) / 8 + 1);
 	while (placed < tot_treasures) {
 		x = rooms[room].x + (rand() % (rooms[room].w - 2));
 		y = rooms[room].y + (rand() % (rooms[room].h - 2));
@@ -1534,7 +1577,7 @@ void MoveEnemy(struct enemy *e)
 					if (b->firer == e) {
 						// add_int_stat(STAT_BULLETS_CANCELLED, 1);
 						b->delete_me = 1;
-						CreateGem(b->x, b->y, b->room,
+						CreateEnemyGem(b->x, b->y, b->room,
 							(e->max_gems + e->min_gems) / 5 + (artifacts[AF_CRYSTAL_EFFICIENCY] * (e->max_gems + e->min_gems) / 4));
 					}
 				}
@@ -1558,7 +1601,7 @@ void MoveEnemy(struct enemy *e)
 				rooms[e->room].enemies--;
 				n_gems = e->min_gems + rand()%(e->max_gems - e->min_gems + 1);
 				for (i = 0; i < n_gems; i++) {
-					CreateGem(e->x - 16 + rand()%32,
+					CreateEnemyGem(e->x - 16 + rand()%32,
 						e->y - 16 + rand()%32, e->room, 1+rand()%4 + (artifacts[T_CRYSTAL_EFFICIENCY]*rand()%3));
 				}
 				if (rooms[e->room].room_type == 3) {
@@ -2543,7 +2586,7 @@ void SoupUpEnemies()
 	
 	str_multiplier = 1.0 + (1.0/3.0)*(float)enemy_evolutions;
 	fr_divider = 1.0 + (2.0/3.0)*(float)enemy_evolutions;
-	
+
 	while (e != NULL) {
 		if (e->delete_me == 0) {
 			if (e->enemy_type != 10) {

@@ -33,6 +33,8 @@ void CircuitBullets(int x, int y, int r);
 void CreateGem(int x, int y, int r, int v);
 
 extern int total_enemies, killed_enemies, total_gems, enemy_evolutions;
+extern float average_gems;
+extern float expected_total_gems;
 
 void WriteCreatureData();
 void WriteEnemyData();

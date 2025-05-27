@@ -68,8 +68,9 @@ const char *itemNames[] = {
   "Extra Life"
 };
 
-const int rooms_to_gen = 3000;
-const int rooms_to_knife = 3000;
+int rooms_to_gen = 3000;
+int rooms_to_knife = 3000;
+float crystal_scaling = 1.0f; // adds multiplier to crystal gain to make up for fewer enemies when using smaller room counts
 
 char apEnabled = 0;
 char apStatus[24] = {0};

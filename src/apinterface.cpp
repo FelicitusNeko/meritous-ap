@@ -269,6 +269,21 @@ void ConnectAP()
       apCostScale = data["cost_scale"].get<std::vector<int>>();
     else apCostScale = std::vector<int>({80,5,4}); 
 
+    if (data.find("rooms") != data.end() && data["rooms"].is_number_integer()) {
+      rooms_to_gen = data["rooms"].get<int>();
+      if (rooms_to_gen > 3000) rooms_to_gen = 3000;
+    }
+    else rooms_to_gen = 3000;
+
+    if (data.find("agate_knife_percent") != data.end() && data["agate_knife_percent"].is_number_integer()) {
+      int agate_knife_percent = data["agate_knife_percent"].get<int>();
+      if (agate_knife_percent < 0) agate_knife_percent = 0;
+      if (agate_knife_percent > 100) agate_knife_percent = 100;
+      rooms_to_knife = (rooms_to_gen * agate_knife_percent) / 100;
+      if (rooms_to_knife < 1) rooms_to_knife = 1; // 0 will cause the knife to never spawn, 1 spawns it in the starting room
+    }
+    else rooms_to_knife = rooms_to_gen;
+
     if (deathlink) ap->ConnectUpdate(false, 0b111, true, {"AP", "DeathLink"});
     ap->StatusUpdate(APClient::ClientStatus::PLAYING);
     printf("Connected and ready to go as %s\n", ap->get_player_alias(ap->get_player_number()).c_str());
@@ -283,6 +298,7 @@ void ConnectAP()
     ap_connect_sent = false;
     if (std::find(errors.begin(), errors.end(), "InvalidSlot") != errors.end()) {
       //bad_slot(game?game->get_slot():"");
+      SetAPStatus("InvalidSlot", 1);
     } else {
       printf("AP: Connection refused:");
       for (const auto& error: errors) printf(" %s", error.c_str());
@@ -407,8 +423,6 @@ void WriteAPState()
 
 void ReadAPState()
 {
-  CreateAPStores();
-
   int progress = 0;
   nextCheckToGet = FRInt();
   for (auto store: apStores) {

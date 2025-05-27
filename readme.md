@@ -50,7 +50,7 @@ In a future update, for ease of use, this process will be moved into in-game men
 
 ### YAML configuration file
 
-The player configuration file (also known as YAML) will determine the generation parameters for the game. To obtain one, refer to either [the official Archipelago settings page for this game](https://archipelago.gg/games/Meritous/player-settings), or [the unofficial Archipelago Settings Tool](https://lowbiasgaming.net/archipelago) for more advanced options, including the option to randomize which game will be played.
+The player configuration file (also known as YAML) will determine the generation parameters for the game. To obtain one, refer to [the official Archipelago options page for this game](https://archipelago.gg/games/Meritous/player-options).
 
 ## Configuring playlist
 

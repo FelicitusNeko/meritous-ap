@@ -1216,7 +1216,7 @@ void ArtifactRoomUnlock(int room)
 	
 	// place treasure
 	placed = 0;
-	tot_treasures = 2 + rand() % (rooms[room].s_dist / 8 + 1);
+	tot_treasures = 3 + rand() % (rooms[room].s_dist / 8 + 1);
 	while (placed < tot_treasures) {
 		x = rooms[room].x + (rand() % (rooms[room].w - 2));
 		y = rooms[room].y + (rand() % (rooms[room].h - 2));
